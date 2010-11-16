@@ -42,6 +42,14 @@ roar_vs_write = libroar.roar_vs_write
 roar_vs_write.argtypes = [c_void_p, c_void_p, c_long, c_void_p]
 roar_vs_write.restypes = [c_long]
 
+roar_vs_file_simple = libroar.roar_vs_file_simple
+roar_vs_file_simple.argtypes = [c_void_p, c_char_p, c_void_p]
+roar_vs_file_simple.restypes = [c_int]
+
+roar_vs_run =  libroar.roar_vs_run
+roar_vs_run.argtypes = [c_void_p, c_void_p]
+roar_vs_run.restypes = None
+
 roar_vs_close = libroar.roar_vs_close
 roar_vs_close.argtypes = [c_void_p, c_int, c_void_p]
 roar_vs_close.restypes = None
@@ -50,39 +58,50 @@ ROAR_VS_TRUE = 1
 ROAR_CODEC_PCM_S_LE = 1
 ROAR_DIR_PLAY = 1
 
+ROAR_ERROR_NONE = 0
+
 class roar_vs:
-   def __init__(self, server = None, name = None, con = None, from_file = None):
+   def __init__(self, server = None, name = None, con = None):
       self.err = c_int()
 
-      if from_file and con:
+      if ( server or name ) and con:
          raise Exception # Something more spesific here.
 
       # If we pass in con, do roar_vs_new_from_con
       if con:
          self.handle = roar_vs_new_from_con(con, byref(self.err))
-      elif from_file:
-         self.handle = roar_vs_new_from_file(from_file) # Fix this
       else:
          self.handle = roar_vs_new(server, name, byref(self.err))
 
-      if self.err != ROAR_ERR_NONE:
+      if self.handle == None:
          raise IOError
 
+   def open(self, file):
+      roar_vs_file_simple(self.handle, file, byref(self.err))
+
    def write(self, buf):
-      return roar_vs_write(self.handle, buf, len(buf), None)
+      return roar_vs_write(self.handle, buf, len(buf), byref(self.err))
+
+   def run(self):
+      roar_vs_run(self.handle, byref(self.err))
 
    def close(self):
-      roar_vs_close(self.handle, ROAR_VS_TRUE, None)
+      roar_vs_close(self.handle, ROAR_VS_TRUE, byref(self.err))
       self.handle = None
 
 if __name__ == '__main__':
 
-   sys.stdin = sys.stdin.detach()
 
-   rd = roar_vs(44100, 2)
-   buf = sys.stdin.read(44)
-   buf = sys.stdin.read(128)
-   while rd.write(buf):
-      buf = sys.stdin.read(128)
+#   sys.stdin = sys.stdin.detach()
+
+#   rd = roar_vs(44100, 2)
+#   buf = sys.stdin.read(44)
+#   buf = sys.stdin.read(128)
+#   while rd.write(buf):
+#      buf = sys.stdin.read(128)
+
+   rd = roar_vs();
+   rd.open('http://88.191.226.56/mr.ogg')
+   rd.run()
    rd.close()
 
