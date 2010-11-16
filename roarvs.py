@@ -30,6 +30,14 @@ roar_vs_new_simple = libroar.roar_vs_new_simple
 roar_vs_new_simple.argtypes = [c_char_p, c_char_p, c_int, c_int, c_int, c_int, c_void_p]
 roar_vs_new_simple.restypes = [c_void_p]
 
+roar_vs_new = libroar.roar_vs_new
+roar_vs_new.argtypes = [c_char_p, c_char_p, c_void_p]
+roar_vs_new.restypes = [c_void_p]
+
+roar_vs_new_from_con = libroar.roar_vs_new
+roar_vs_new_from_con.argtypes = [c_void_p, c_void_p]
+roar_vs_new_from_con.restypes = [c_void_p]
+
 roar_vs_write = libroar.roar_vs_write
 roar_vs_write.argtypes = [c_void_p, c_void_p, c_long, c_void_p]
 roar_vs_write.restypes = [c_long]
@@ -43,9 +51,21 @@ ROAR_CODEC_PCM_S_LE = 1
 ROAR_DIR_PLAY = 1
 
 class roar_vs:
-   def __init__(self, rate, chans):
-      self.handle = roar_vs_new_simple(None, None, rate, chans, ROAR_CODEC_PCM_S_LE, 16, ROAR_DIR_PLAY, None)
-      if self.handle == None:
+   def __init__(self, server = None, name = None, con = None, from_file = None):
+      self.err = c_int()
+
+      if from_file and con:
+         raise Exception # Something more spesific here.
+
+      # If we pass in con, do roar_vs_new_from_con
+      if con:
+         self.handle = roar_vs_new_from_con(con, byref(self.err))
+      elif from_file:
+         self.handle = roar_vs_new_from_file(from_file) # Fix this
+      else:
+         self.handle = roar_vs_new(server, name, byref(self.err))
+
+      if self.err != ROAR_ERR_NONE:
          raise IOError
 
    def write(self, buf):
